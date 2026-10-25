@@ -1,0 +1,307 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Singer Key Finder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>body{margin:0}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column like a music stand; the verdict on top, the keyboard below it, detail after. */
+:root{
+  --bg:#F1F2F6; --surface:#FFFFFF; --ink:#161925; --muted:#5B6074; --line:#D9DCE6;
+  --accent:#2F45C2; --accent-soft:#DCE1FA; --gold:#B8860B; --gold-soft:#F6E7BF;
+  --warn:#A3471C;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11131A; --surface:#1A1D27; --ink:#ECEEF5; --muted:#9BA1B6; --line:#2C3042;
+  --accent:#8E9DFF; --accent-soft:#262E5C; --gold:#E3B649; --gold-soft:#4A3C17; --warn:#F09A6E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11131A; --surface:#1A1D27; --ink:#ECEEF5; --muted:#9BA1B6; --line:#2C3042;
+  --accent:#8E9DFF; --accent-soft:#262E5C; --gold:#E3B649; --gold-soft:#4A3C17; --warn:#F09A6E; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:2.1rem;font-weight:700;letter-spacing:-.02em;line-height:1.05}
+h2{font-size:1.05rem;font-weight:700}
+.eyebrow{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.lede{color:var(--muted);margin:6px 0 0;max-width:60ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+button,.filebtn{font:inherit;font-weight:700;border-radius:10px;padding:12px 16px;cursor:pointer;border:1px solid var(--accent);display:inline-flex;align-items:center;gap:8px}
+.primary{background:var(--accent);color:var(--surface)}
+.ghost{background:transparent;color:var(--accent)}
+button:focus-visible,.filebtn:focus-within,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#file{position:absolute;opacity:0;width:1px;height:1px}
+.status{font-size:.92rem;color:var(--muted);min-height:1.4em}
+.status.err{color:var(--warn)}
+.tip{font-size:.85rem;color:var(--muted);margin:0}
+.verdict{display:flex;flex-direction:column;gap:4px}
+.source{font-size:.8rem;color:var(--muted)}
+.key{font-family:var(--display);font-size:3.2rem;font-weight:700;letter-spacing:-.03em;line-height:1}
+.keyrow{display:flex;align-items:baseline;flex-wrap:wrap;gap:12px}
+.pill{font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:.04em;text-transform:uppercase}
+.p-strong{background:var(--accent-soft);color:var(--accent)}
+.p-fair{background:var(--gold-soft);color:var(--gold)}
+.p-rough{background:transparent;color:var(--warn);border:1px solid var(--warn)}
+.alt{color:var(--muted);font-size:.92rem}
+.psr{border-top:1px solid var(--line);padding-top:14px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.lcd{font-family:var(--mono);background:#1E2A1E;color:#B9F5A8;border-radius:8px;padding:10px 12px;text-align:center;min-width:92px}
+.lcd small{display:block;font-size:.62rem;letter-spacing:.14em;opacity:.75}
+.lcd b{font-size:1.6rem;font-weight:500}
+.psr p{margin:0;min-width:0}
+.chords{display:flex;flex-wrap:wrap;gap:8px}
+.chord{border:1px solid var(--line);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;min-width:52px}
+.chord b{font-size:1rem}
+.chord span{font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+.chord.home{border-color:var(--gold);background:var(--gold-soft)}
+.kbd{width:100%;overflow-x:auto}
+.kbd svg{display:block;width:100%;min-width:520px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.bars{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:120px}
+.bar{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.bar div{width:100%;border-radius:4px 4px 0 0;background:var(--line);min-height:2px}
+.bar.in div{background:var(--accent)}
+.bar.tonic div{background:var(--gold)}
+.bar span{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.range{font-family:var(--mono);font-size:.9rem}
+select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
+.compare-out{margin:0}
+.live{display:flex;align-items:center;gap:18px}
+.livenote{font-family:var(--display);font-size:3rem;font-weight:700;min-width:3ch}
+.cents{flex:1;min-width:0}
+.meter{position:relative;height:10px;background:var(--line);border-radius:99px}
+.meter i{position:absolute;top:-3px;width:4px;height:16px;border-radius:2px;background:var(--accent);left:50%;transition:left .08s}
+.meter:after{content:"";position:absolute;left:50%;top:-4px;width:1px;height:18px;background:var(--muted)}
+.cents span{font-family:var(--mono);font-size:.75rem;color:var(--muted)}
+.rec{width:10px;height:10px;border-radius:50%;background:var(--warn);display:inline-block;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.rec{animation:none}.meter i{transition:none}}
+</style>
+</head><body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">For the keyboardist</div>
+    <h1>Singer Key Finder</h1>
+    <p class="lede">Upload a voice note of someone singing. It tracks every note they hit and tells you their key, the chords, and the transpose setting for your keyboard.</p>
+  </header>
+
+  <section class="panel" aria-label="Input">
+    <div class="btns">
+      <label class="filebtn primary" for="file">Upload a recording<input id="file" type="file" accept="audio/*,.m4a,.mp3,.wav,.ogg,.opus,.aac"></label>
+      <button class="ghost" id="liveBtn" type="button">Listen live</button>
+    </div>
+    <div class="status" id="status" role="status"></div>
+    <div id="livePanel" hidden>
+      <div class="live">
+        <div class="livenote" id="liveNote">–</div>
+        <div class="cents">
+          <div class="meter"><i id="needle"></i></div>
+          <span id="centsTxt">waiting for voice</span>
+        </div>
+      </div>
+    </div>
+    <p class="tip">Best results: 20–60 seconds, voice clearly louder than any music. A chorus works well.</p>
+  </section>
+
+  <section class="panel" id="results" aria-live="polite">
+    <div class="verdict">
+      <span class="source" id="source"></span>
+      <div class="keyrow"><span class="key" id="keyName">–</span><span class="pill" id="conf"></span></div>
+      <span class="alt" id="alt"></span>
+    </div>
+    <div class="psr">
+      <div class="lcd"><small>TRANSPOSE</small><b id="tr">00</b></div>
+      <p id="trText"></p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Chords in this key</h2>
+    <div class="chords" id="chords"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Their range on the keyboard</h2>
+    <div class="range" id="range"></div>
+    <div class="kbd" id="kbd"></div>
+    <div class="legend"><span><i style="background:var(--gold)"></i>Home note</span><span><i style="background:var(--accent)"></i>In the scale</span><span><i style="background:var(--accent-soft);border:1px solid var(--accent)"></i>Notes they sang</span></div>
+  </section>
+
+  <section class="panel">
+    <h2>Which notes they leaned on</h2>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Compare with the original song</h2>
+    <label for="orig" class="tip">Original key of the song, if you know it</label>
+    <select id="orig"><option value="">Choose a key…</option></select>
+    <p class="compare-out" id="compareOut"></p>
+  </section>
+</div>
+
+<script>
+const FLAT=['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+const SHARP=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+const pcOf=m=>((Math.round(m)%12)+12)%12;
+const usesFlats=(k,mode)=>mode==='maj'?[1,3,5,8,10].includes(k):[0,2,3,5,7,10].includes(k);
+const keyLabel=(k,mode)=>mode==='maj'?(k===6?'F♯':FLAT[k])+' major':(k===3?'E♭':k===10?'B♭':SHARP[k])+' minor';
+const nn=(pc,flats)=>(flats?FLAT:SHARP)[pc];
+const noteWithOct=(m,flats)=>nn(pcOf(m),flats)+(Math.floor(Math.round(m)/12)-1);
+const wrap=d=>{d=((d%12)+12)%12;return d>6?d-12:d};
+const sgn=d=>(d>0?'+':d<0?'−':'')+Math.abs(d);
+const $=id=>document.getElementById(id);
+
+/* ---------- pitch tracking (YIN) ---------- */
+function downsample(data,sr){const f=Math.max(1,Math.round(sr/11025));if(f===1)return{x:data,sr};const n=Math.floor(data.length/f),x=new Float32Array(n);for(let i=0;i<n;i++){let s=0;for(let j=0;j<f;j++)s+=data[i*f+j];x[i]=s/f}return{x,sr:sr/f}}
+function yin(buf,sr){
+  const W=buf.length>>1,maxT=Math.min(W-1,Math.floor(sr/70)),minT=Math.max(2,Math.floor(sr/1100));
+  const d=new Float32Array(maxT+1);
+  for(let t=1;t<=maxT;t++){let s=0;for(let i=0;i<W;i++){const v=buf[i]-buf[i+t];s+=v*v}d[t]=s}
+  let run=0;d[0]=1;for(let t=1;t<=maxT;t++){run+=d[t];d[t]=run?d[t]*t/run:1}
+  let tau=-1;for(let t=minT;t<=maxT;t++){if(d[t]<0.15){while(t+1<=maxT&&d[t+1]<d[t])t++;tau=t;break}}
+  if(tau<0)return null;
+  let bt=tau;if(tau>1&&tau<maxT){const a=d[tau-1],b=d[tau],c=d[tau+1],den=a+c-2*b;if(den)bt=tau+(a-c)/(2*den)}
+  return 69+12*Math.log2(sr/bt/440);
+}
+const median=a=>{const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
+
+class Tracker{
+  constructor(){this.hist=new Array(12).fill(0);this.notes=[];this.cur=null;this.recent=[]}
+  push(m){
+    if(m==null){this.recent=[];this.close();return}
+    this.recent.push(m);if(this.recent.length>3)this.recent.shift();
+    const v=median(this.recent);
+    if(this.cur&&Math.abs(v-this.cur.ref)<0.6){this.cur.vals.push(v);this.cur.ref+=(v-this.cur.ref)/this.cur.vals.length}
+    else{this.close();this.cur={vals:[v],ref:v}}
+  }
+  close(){const c=this.cur;this.cur=null;if(!c||c.vals.length<4)return;const m=median(c.vals);this.notes.push({midi:m,len:c.vals.length});this.hist[pcOf(m)]+=c.vals.length}
+}
+function analyzeBuffer(data,sr){
+  const {x,sr:s}=downsample(data,sr),N=512,H=256,rms=[];
+  for(let i=0;i+N<=x.length;i+=H){let e=0;for(let j=0;j<N;j++)e+=x[i+j]*x[i+j];rms.push(Math.sqrt(e/N))}
+  const sorted=[...rms].sort((a,b)=>a-b),thr=Math.max(0.003,0.2*(sorted[Math.floor(sorted.length*0.9)]||0));
+  const t=new Tracker();
+  for(let f=0,i=0;f<rms.length;f++,i+=H){t.push(rms[f]<thr?null:yin(x.subarray(i,i+N),s))}
+  t.close();return t;
+}
+
+/* ---------- key estimate ---------- */
+function corr(a,b){const n=12,ma=a.reduce((p,c)=>p+c)/n,mb=b.reduce((p,c)=>p+c)/n;let num=0,da=0,db=0;for(let i=0;i<n;i++){num+=(a[i]-ma)*(b[i]-mb);da+=(a[i]-ma)**2;db+=(b[i]-mb)**2}return da&&db?num/Math.sqrt(da*db):0}
+function estimate(t){
+  const total=t.hist.reduce((a,b)=>a+b,0);if(total<40)return null;
+  const last=t.notes.length?pcOf(t.notes[t.notes.length-1].midi):-1,out=[];
+  for(const [mode,prof] of [['maj',MAJ],['min',MIN]])for(let k=0;k<12;k++){const p=prof.map((_,i)=>prof[(i-k+12)%12]);out.push({k,mode,r:corr(t.hist,p)+(last===k?0.04:0)})}
+  out.sort((a,b)=>b.r-a.r);return out;
+}
+
+/* ---------- rendering ---------- */
+function scaleOf(k,mode){return (mode==='maj'?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10]).map(i=>(k+i)%12)}
+function chordsOf(k,mode){
+  const f=usesFlats(k,mode);
+  const set=mode==='maj'?[[0,'','I'],[2,'m','ii'],[4,'m','iii'],[5,'','IV'],[7,'','V'],[9,'m','vi']]:[[0,'m','i'],[3,'','III'],[5,'m','iv'],[7,'','V'],[8,'','VI'],[10,'','VII']];
+  return set.map(([s,q,r])=>({name:nn((k+s)%12,f)+q,roman:r,home:s===0}));
+}
+function drawKeyboard(scale,tonic,low,high){
+  const lo=36,hi=84,whites=[],blacks=[];let x=0;const W=10;
+  for(let m=lo;m<=hi;m++){const pc=m%12;if([1,3,6,8,10].includes(pc))blacks.push({m,x:x*W-3});else{whites.push({m,x:x*W});x++}}
+  const mark=(m,cx,cy,r)=>{const pc=m%12;if(pc===tonic)return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--gold)"/>`;if(scale.includes(pc))return `<circle cx="${cx}" cy="${cy}" r="${r-0.6}" fill="var(--accent)"/>`;return ''};
+  const inR=m=>low!=null&&m>=Math.round(low)&&m<=Math.round(high);
+  let s=`<svg viewBox="-1 -1 ${x*W+2} 66" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Keyboard showing the singer's range">`;
+  for(const k of whites){s+=`<rect x="${k.x}" y="0" width="${W}" height="62" rx="1.5" fill="${inR(k.m)?'var(--accent-soft)':'var(--surface)'}" stroke="var(--muted)" stroke-width=".5"/>`;s+=mark(k.m,k.x+W/2,48,2.2);if(k.m%12===0)s+=`<text x="${k.x+W/2}" y="59" font-size="4.2" text-anchor="middle" fill="var(--muted)" font-family="JetBrains Mono,monospace">C${k.m/12-1}</text>`}
+  for(const k of blacks){s+=`<rect x="${k.x}" y="0" width="6" height="38" rx="1" fill="${inR(k.m)?'var(--accent)':'var(--ink)'}" stroke="var(--ink)" stroke-width=".4"/>`;s+=mark(k.m,k.x+3,31,1.8)}
+  return s+'</svg>';
+}
+function render(t,label){
+  const est=estimate(t);
+  $('source').textContent=label;
+  if(!est){$('keyName').textContent='Not enough singing yet';$('conf').textContent='';$('conf').className='pill';$('alt').textContent='Try a longer or clearer recording.';return}
+  const top=est[0],{k,mode}=top,f=usesFlats(k,mode);
+  const rel=mode==='maj'?{k:(k+9)%12,mode:'min'}:{k:(k+3)%12,mode:'maj'};
+  const second=est.find(e=>!(e.k===k&&e.mode===mode)&&!(e.k===rel.k&&e.mode===rel.mode));
+  $('keyName').textContent=keyLabel(k,mode);
+  const c=top.r>0.78?['Strong match','p-strong']:top.r>0.6?['Fair match','p-fair']:['Rough guess','p-rough'];
+  $('conf').textContent=c[0];$('conf').className='pill '+c[1];
+  $('alt').textContent=`Same notes as ${keyLabel(rel.k,rel.mode)}. Next closest: ${keyLabel(second.k,second.mode)}.`;
+  const base=mode==='maj'?0:9,tr=wrap(k-base);
+  $('tr').textContent=tr===0?'00':(tr>0?'+':'-')+String(Math.abs(tr)).padStart(2,'0');
+  $('trText').innerHTML=tr===0?`No transpose needed. Play in <b>${mode==='maj'?'C major':'A minor'}</b> as normal.`:
+    `Set <b>Transpose to ${sgn(tr)}</b> in the Function menu, then play in <b>${mode==='maj'?'C major':'A minor'}</b>. Your hands use the easy white-key shapes and the keyboard sounds in ${keyLabel(k,mode)}.`;
+  $('chords').innerHTML=chordsOf(k,mode).map(ch=>`<div class="chord${ch.home?' home':''}"><b>${ch.name}</b><span>${ch.roman}</span></div>`).join('');
+  const ms=t.notes.map(n=>n.midi).sort((a,b)=>a-b),low=ms[Math.floor(ms.length*0.02)],high=ms[Math.min(ms.length-1,Math.floor(ms.length*0.98))];
+  $('range').textContent=ms.length?`Lowest ${noteWithOct(low,f)} · Highest ${noteWithOct(high,f)} · ${t.notes.length} notes heard`:'';
+  const sc=scaleOf(k,mode);
+  $('kbd').innerHTML=drawKeyboard(sc,k,low,high);
+  const mx=Math.max(...t.hist)||1;
+  $('bars').innerHTML=t.hist.map((v,pc)=>`<div class="bar ${pc===k?'tonic':sc.includes(pc)?'in':''}"><div style="height:${Math.round(v/mx*95)}%"></div><span>${nn(pc,f)}</span></div>`).join('');
+  current={k,mode};updateCompare();
+}
+let current=null;
+const orig=$('orig');
+for(const mode of ['maj','min'])for(let k=0;k<12;k++){const o=document.createElement('option');o.value=k+'|'+mode;o.textContent=keyLabel(k,mode);orig.appendChild(o)}
+function updateCompare(){
+  const out=$('compareOut');if(!current||!orig.value){out.textContent='';return}
+  const [ok,om]=orig.value.split('|');const toMaj=(k,m)=>m==='maj'?k:(k+3)%12;
+  const d=wrap(toMaj(current.k,current.mode)-toMaj(+ok,om));
+  out.innerHTML=d===0?'They sing in the same key as the original.':`They sing <b>${Math.abs(d)} semitone${Math.abs(d)>1?'s':''} ${d>0?'higher':'lower'}</b> than the original. If you know the song in the original key, set <b>Transpose to ${sgn(d)}</b> and play it the way you learned it.`;
+}
+orig.addEventListener('change',updateCompare);
+
+/* ---------- example on load ---------- */
+function demo(){
+  const sr=11025,mel=[[67,.5],[69,.5],[71,1],[74,.5],[71,.5],[69,.5],[67,1],[64,.5],[62,.5],[67,.75],[71,.75],[69,.5],[67,1.4],[0,.3],[74,.5],[76,.5],[74,.5],[71,.5],[72,.5],[71,.5],[69,1],[67,.5],[66,.5],[67,1.6]];
+  const len=Math.ceil(mel.reduce((a,b)=>a+b[1],0)*sr),y=new Float32Array(len);let p=0,ph=0;
+  for(const [m,d] of mel){const n=Math.floor(d*sr);for(let i=0;i<n;i++){if(m){const f=440*2**((m-69+0.12*Math.sin(2*Math.PI*5*i/sr))/12);ph+=2*Math.PI*f/sr;const env=Math.min(1,i/400,(n-i)/400);y[p+i]=0.3*env*(Math.sin(ph)+.5*Math.sin(2*ph)+.25*Math.sin(3*ph))}}p+=n}
+  render(analyzeBuffer(y,sr),'Example: a built-in test melody. Upload a recording to analyze a real singer.');
+}
+
+/* ---------- file upload ---------- */
+const status=(msg,err)=>{$('status').textContent=msg;$('status').className='status'+(err?' err':'')};
+$('file').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;stopLive();
+  status('Opening '+file.name+'…');
+  try{
+    const ab=await file.arrayBuffer(),ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const audio=await new Promise((res,rej)=>{const pr=ctx.decodeAudioData(ab,res,rej);if(pr&&pr.catch)pr.catch(rej)});
+    status('Listening to the notes…');await new Promise(r=>setTimeout(r,40));
+    const n=Math.min(audio.length,audio.sampleRate*180),mono=new Float32Array(n);
+    for(let c=0;c<audio.numberOfChannels;c++){const d=audio.getChannelData(c);for(let i=0;i<n;i++)mono[i]+=d[i]/audio.numberOfChannels}
+    render(analyzeBuffer(mono,audio.sampleRate),'From your recording: '+file.name);
+    status('Done. '+(audio.duration>180?'Analyzed the first 3 minutes.':''));ctx.close&&ctx.close();
+  }catch(err){status('That file could not be opened. Try an mp3, m4a or wav. WhatsApp voice notes can be shared as audio and saved first.',true)}
+  e.target.value='';
+});
+
+/* ---------- live mic ---------- */
+let live=null;
+function stopLive(){if(!live)return;live.stream.getTracks().forEach(t=>t.stop());live.ctx.close();cancelAnimationFrame(live.raf);live.t.close();render(live.t,'From live listening');live=null;$('liveBtn').textContent='Listen live';$('livePanel').hidden=true}
+$('liveBtn').addEventListener('click',async()=>{
+  if(live){stopLive();status('Stopped listening.');return}
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}
+  catch(e){status('The microphone is not available here. Record a voice note on your phone and upload it instead.',true);return}
+  const ctx=new (window.AudioContext||window.webkitAudioContext)(),an=ctx.createAnalyser();an.fftSize=8192;ctx.createMediaStreamSource(stream).connect(an);
+  const buf=new Float32Array(an.fftSize),fct=Math.max(1,Math.round(ctx.sampleRate/11025)),sr=ctx.sampleRate/fct,frame=new Float32Array(512);
+  live={stream,ctx,t:new Tracker(),raf:0,last:0,lastRender:0};
+  $('liveBtn').innerHTML='<span class="rec"></span>Stop listening';$('livePanel').hidden=false;status('Listening… sing or play the recording near the phone.');
+  const loop=now=>{
+    if(!live)return;live.raf=requestAnimationFrame(loop);
+    if(now-live.last<23)return;live.last=now;
+    an.getFloatTimeDomainData(buf);const off=buf.length-512*fct;let e=0;
+    for(let i=0;i<512;i++){let s=0;for(let j=0;j<fct;j++)s+=buf[off+i*fct+j];frame[i]=s/fct;e+=frame[i]*frame[i]}
+    const m=Math.sqrt(e/512)<0.01?null:yin(frame,sr);live.t.push(m);
+    if(m!=null){const r=Math.round(m),c=Math.round((m-r)*100);$('liveNote').textContent=noteWithOct(m,current?usesFlats(current.k,current.mode):false);$('needle').style.left=(50+c)+'%';$('centsTxt').textContent=(c>0?'+':'')+c+' cents'}
+    if(now-live.lastRender>500){live.lastRender=now;render(live.t,'Live: updating as they sing')}
+  };
+  live.raf=requestAnimationFrame(loop);
+});
+
+demo();
+</script>
+
+</body></html>
